@@ -1,0 +1,76 @@
+{
+	"folders": [
+		{
+			"name": "ESP32",
+			"path": "../../ESP32"
+		},
+		{
+			"name": "ESP32 FREERTOS",
+			"path": "../../ESP32 FREERTOS"
+		},
+		{
+			"name": "ESP32 FREERTOS WIFI MAINTAIN",
+			"path": "../../ESP32 FREERTOS WIFI MAINTAIN"
+		},
+		{
+			"name": "ESP32 Bluetooth MIT App Test",
+			"path": "../../ESP32 Bluetooth MIT App Test"
+		},
+		{
+			"name": "Aquaponics Monitoring and Control System",
+			"path": "../../Aquaponics Monitoring and Control System"
+		},
+		{
+			"name": "AquaponicsSensorsTest ESP32 ThingSpeak",
+			"path": "../../AquaponicsSensorsTest ESP32 ThingSpeak"
+		},
+		{
+			"name": "ESP32 Preferences Test",
+			"path": "../../ESP32 Preferences Test"
+		},
+		{
+			"name": "ESP32 MCP23017 and TCA9548A",
+			"path": "../../ESP32 MCP23017 and TCA9548A"
+		},
+		{
+			"name": "ESP32 NTP EpochTime Test",
+			"path": "../../ESP32 NTP EpochTime Test"
+		},
+		{
+			"name": "ESP32 TIMER INTERRUPT TEST",
+			"path": "../../ESP32 TIMER INTERRUPT TEST"
+		},
+		{
+			"name": "AQMCS - Program backbone",
+			"path": "../../AQMCS - Program backbone"
+		},
+		{
+			"name": "ESP32 WEBSERVER AND MIT APP INVENTOR CONTROL TEST",
+			"path": "../../ESP32 WEBSERVER AND MIT APP INVENTOR CONTROL TEST"
+		},
+		{
+			"name": "ESP32 WebSocket Server Test",
+			"path": "../../ESP32 WebSocket Server Test"
+		},
+		{
+			"name": "Smart Aquaponics System",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"array": "cpp",
+			"*.tcc": "cpp",
+			"memory": "cpp",
+			"istream": "cpp",
+			"functional": "cpp",
+			"tuple": "cpp",
+			"utility": "cpp",
+			"bitset": "cpp",
+			"algorithm": "cpp",
+			"string": "cpp",
+			"deque": "cpp",
+			"vector": "cpp"
+		}
+	}
+}
