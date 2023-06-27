@@ -344,7 +344,7 @@ void IRAM_ATTR onAquaponicPress() {
 
 void IRAM_ATTR onAquaculturePress() {
 	unsigned long button_time = millis();
-  if (button_time - aquacultureButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*aquacultureButton.lastPressTime*/ > 250){
     aquacultureButton.pressed = true;
     previousButtonPressTime = button_time;
     //aquacultureButton.lastPressTime = button_time;
@@ -358,9 +358,10 @@ void IRAM_ATTR onAquaculturePress() {
 
 void IRAM_ATTR onHydroponicsPress() {
 	unsigned long button_time = millis();
-  if (button_time - hydroponicsButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*hydroponicsButton.lastPressTime*/ > 250){
     hydroponicsButton.pressed = true;
-    hydroponicsButton.lastPressTime = button_time;
+    previousButtonPressTime = button_time;
+    //hydroponicsButton.lastPressTime = button_time;
     operationMode = 3;
     buttonPressed = 3;
     localSwitch = true;
@@ -371,9 +372,10 @@ void IRAM_ATTR onHydroponicsPress() {
 
 void IRAM_ATTR onSludgePress() {
 	unsigned long button_time = millis();
-  if (button_time - transferButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*transferButton.lastPressTime*/ > 250){
     transferButton.pressed = true;
-    transferButton.lastPressTime = button_time;
+    previousButtonPressTime = button_time;
+    //transferButton.lastPressTime = button_time;
     operationMode = 4;
     buttonPressed = 4;
     localSwitch = true;
@@ -384,9 +386,10 @@ void IRAM_ATTR onSludgePress() {
 
 void IRAM_ATTR onRelayPress() {
 	unsigned long button_time = millis();
-  if (button_time - relayButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*relayButton.lastPressTime*/ > 250){
     relayButton.pressed = true;
-    relayButton.lastPressTime = button_time;
+    previousButtonPressTime = button_time;
+    //relayButton.lastPressTime = button_time;
     operationMode = 5;
     buttonPressed = 5;
     localSwitch = true;
@@ -397,35 +400,40 @@ void IRAM_ATTR onRelayPress() {
 
 void IRAM_ATTR onSensorPress() {
 	unsigned long button_time = millis();
-  if (button_time - sensorButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*sensorButton.lastPressTime*/ > 250){
     sensorButton.pressed = true;
+    previousButtonPressTime = button_time;
+    //sensorButton.lastPressTime = button_time;
     buttonPressed = 6;
     localSwitch = true;
-    sensorButton.lastPressTime = button_time;
     Serial.println("Sensor Button Pressed...");
   }
 }
 
 void IRAM_ATTR onWiFiPress() {
 	unsigned long button_time = millis();
-  if (button_time - wifiButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*wifiButton.lastPressTime*/ > 250){
     wifiButton.pressed = true;
+    previousButtonPressTime = button_time;
+    //wifiButton.lastPressTime = button_time;
     buttonPressed = 7;
     localSwitch = true;
-    wifiButton.lastPressTime = button_time;
+    
     Serial.println("WiFi Button Pressed...");
   }
 }
 
 void IRAM_ATTR onSchedulePress() {
 	unsigned long button_time = millis();
-  if (button_time - scheduleButton.lastPressTime > 250){
+  if (button_time - previousButtonPressTime /*scheduleButton.lastPressTime*/ > 250){
     scheduleButton.pressed = true;
+    previousButtonPressTime = button_time;
+    //scheduleButton.lastPressTime = button_time;
     buttonPressed = 8;
     localSwitch = true;
-    settlingStarted = false;
-    transferStarted = false;
-    scheduleButton.lastPressTime = button_time;
+    // settlingStarted = false;
+    // transferStarted = false;
+    
     Serial.println("Schedule Button Pressed...");
   }
 }
