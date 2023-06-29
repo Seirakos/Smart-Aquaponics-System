@@ -52,8 +52,8 @@ struct Button {
 };
 
 /**********CONSTANTS**********/
-const char* DEFAULT_WIFI_SSID = "HUAWEI-2.4G-88uF";               //insert default ssid for dev purposes
-const char* DEFAULT_WIFI_PASSWORD = "wFJKvAksmLtec5Eb";           //insert default password for dev purposes
+const char* DEFAULT_WIFI_SSID = "Moggy";// = "Globe";//= "HUAWEI-2.4G-88uF";               //insert default ssid for dev purposes
+const char* DEFAULT_WIFI_PASSWORD = "calculus";// = "dikoalam"; //= "wFJKvAksmLtec5Eb";           //insert default password for dev purposes
 
 const char* USER_EMAIL = "smartAquaponicsSystem@gmail.com";
 const char* USER_PASSWORD = "smartAquaponics";
@@ -330,7 +330,7 @@ int readIntDB(String buttonPath); //reads the int value from the path, here it i
 //INTERRUPTS
 void IRAM_ATTR onAquaponicPress() {
 	unsigned long button_time = millis();
-  if (button_time - previousButtonPressTime /*aquaponicsButton.lastPressTime*/> 250){
+  if (button_time - previousButtonPressTime /*aquaponicsButton.lastPressTime*/>= 250){
     aquaponicsButton.pressed = true;
     previousButtonPressTime = button_time;
     //aquaponicsButton.lastPressTime = button_time;
@@ -522,7 +522,7 @@ void setup() {
   loadSPIFFsFiles();
 
   wifiConnected = initWiFi();
-  checkLastMode();
+  //checkLastMode();
   internetConnected = internetCheck();
   ntpServerConnected = updateSystemTime();
   firebaseConnected = initFirebase();
@@ -661,27 +661,27 @@ bool initWiFi() {
   lcd.print("WIFI CONNECTION");
   lcd.setCursor(0, 1);
   lcd.print("INITIALIZING...");
-
-  Serial.println("BOOT - WIFI INIT: Attempting to connect to WiFi.");
-  if(ssid==""){
-  Serial.println("BOOT - WIFI INIT: Undefined SSID or IP address.");
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("WIFI CONNECTION");
-  lcd.setCursor(0, 1);
-  lcd.print("NO CREDENTIALS..");
   delay(500);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("WIFI CONNECTION");
-  lcd.setCursor(0, 1);
-  lcd.print("CANNOT CONNECT..");
-  return false;
-  }
+  // Serial.println("BOOT - WIFI INIT: Attempting to connect to WiFi.");
+  // if(ssid==""){
+  // Serial.println("BOOT - WIFI INIT: Undefined SSID or IP address.");
+  // lcd.clear();
+  // lcd.setCursor(0, 0);
+  // lcd.print("WIFI CONNECTION");
+  // lcd.setCursor(0, 1);
+  // lcd.print("NO CREDENTIALS..");
+  // delay(500);
+  // lcd.clear();
+  // lcd.setCursor(0, 0);
+  // lcd.print("WIFI CONNECTION");
+  // lcd.setCursor(0, 1);
+  // lcd.print("CANNOT CONNECT..");
+  // return false;
+  // }
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid.c_str(), pass.c_str());
-  //WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
+  //WiFi.begin(ssid.c_str(), pass.c_str());
+  WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
   Serial.println("BOOT - WIFI INIT: Connecting to WiFi...");
 
   lcd.clear();
@@ -1434,8 +1434,10 @@ void reconfigureWifi(bool wifiButtonPressed, int buttonPressed) { // deletes the
     wifiButton.pressed = false;
     FirebaseJson json;
     String buttonPath = listenerPath.c_str() + dbButtons(buttonPressed);
-    Serial.printf("\nSet json... %s\n", Firebase.RTDB.set(&fbdo, buttonPath.c_str(), 0) ? "ok" : fbdo.errorReason().c_str());
-
+    if (Firebase.ready()) {
+      Serial.printf("\nSet json... %s\n", Firebase.RTDB.set(&fbdo, buttonPath.c_str(), 0) ? "ok" : fbdo.errorReason().c_str());
+    }
+    
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("CONFIGS DELETED");
@@ -1855,7 +1857,7 @@ void turnEverythingOff(){ //would turn every device connected to the relays off,
 
 void aquaponicsMode() {
   turnEverythingOff();
-  delay(500);
+  delay(1000);
   Serial.println("MODE SWITCHING: Running in aquaponics mode...");
 
   Serial.println("AQUAPONICS MODE: Opening valves...");
@@ -1868,7 +1870,7 @@ void aquaponicsMode() {
 
   mcp.digitalWrite(S_VALVE_1, HIGH);       //normally closed
   mcp.digitalWrite(S_VALVE_2, HIGH);       //normally closed
-  delay(500);
+  delay(1000);
 
   
 
@@ -1882,7 +1884,7 @@ void aquaponicsMode() {
 
   mcp.digitalWrite(AIR_PUMP_1, HIGH);      //normally closed
   mcp.digitalWrite(AIR_PUMP_2, HIGH);      //normally closed
-  delay(500);
+  delay(1000);
   
   Serial.println("AQUAPONICS MODE: Turning on water pumps...");
 
@@ -1901,7 +1903,7 @@ void aquaponicsMode() {
 
 void aquacultureMode() {
   turnEverythingOff();
-  delay(500);
+  delay(1000);
   Serial.println("MODE SWITCHING: Running in aquaculture mode...");
   
   Serial.println("AQUACULTURE MODE: Opening solenoid valves...");
@@ -1914,7 +1916,7 @@ void aquacultureMode() {
 
   mcp.digitalWrite(S_VALVE_1, HIGH); //normally closed
   mcp.digitalWrite(S_VALVE_3, LOW); //normally open
-  delay(500);
+  delay(1000);
 
   Serial.println("AQUACULTURE MODE: Turning on airpumps...");
 
@@ -1926,7 +1928,7 @@ void aquacultureMode() {
 
   mcp.digitalWrite(AIR_PUMP_1, HIGH); //normally closed
   mcp.digitalWrite(AIR_PUMP_2, HIGH); //normally closed
-  delay(500);
+  delay(1000);
 
   Serial.println("AQUACULTURE MODE: Opening motorized valves...");
 
@@ -1936,7 +1938,7 @@ void aquacultureMode() {
   lcd.setCursor(0, 1);
   lcd.print("OPENING MVALVES");
   mcp.digitalWrite(M_VALVE_1, LOW); //normally open
-  delay(1000);
+  delay(15000);
 
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -1983,7 +1985,7 @@ void aquacultureMode() {
 
 void hydroponicsMode() {
   turnEverythingOff();
-  delay(500);
+  delay(1000);
   Serial.println("Mode Switching: Running in hydroponics mode...");
 
   Serial.println("HYDROPONICS MODE: Opening solenoid valves...");
@@ -1995,7 +1997,7 @@ void hydroponicsMode() {
   lcd.print("OPENING SVALVE4");
 
   mcp.digitalWrite(S_VALVE_4, LOW); //normally open
-  delay(500);
+  delay(1000);
 
   Serial.println("HYDROPONICS MODE: Turning on airpumps...");
 
@@ -2007,7 +2009,7 @@ void hydroponicsMode() {
 
   mcp.digitalWrite(AIR_PUMP_1, HIGH); //normally closed
   mcp.digitalWrite(AIR_PUMP_2, HIGH); //normally closed
-  delay(500);
+  delay(1000);
 
   Serial.println("HYDROPONICS MODE: Turning on sump pump...");
 
@@ -2049,7 +2051,7 @@ void transferMode() {
       //divert fishtank water to backup filter
       mcp.digitalWrite(S_VALVE_3, LOW); //normally open
       mcp.digitalWrite(S_VALVE_5, LOW); //normally open
-      delay(500);
+      delay(1000);
 
       Serial.println("TRANSFER MODE: Turning on airpumps...");
 
@@ -2061,7 +2063,7 @@ void transferMode() {
 
       mcp.digitalWrite(AIR_PUMP_1, HIGH); //normally closed
       mcp.digitalWrite(AIR_PUMP_2, HIGH); //normally closed
-      delay(500);
+      delay(1000);
 
       Serial.println("TRANSFER MODE: Turning on water pumps...");
 
@@ -2114,6 +2116,12 @@ void transferMode() {
       Serial.print("TRANSFER MODE: Time left is: ");
       Serial.print(timeLeft);
       Serial.println("s");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("SettleTime Left");
+      lcd.setCursor(0, 1);
+      lcd.print(timeLeft);
 
     } 
 
@@ -2174,6 +2182,12 @@ void transferMode() {
       Serial.print("TRANSFER MODE: Time left is: ");
       Serial.print(timeLeft);
       Serial.println("s");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("TransfTime Left");
+      lcd.setCursor(0, 1);
+      lcd.print(timeLeft);
     } 
 
   }
