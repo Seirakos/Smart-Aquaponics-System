@@ -18,8 +18,6 @@
 #include <WebServer.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
-//#include <BlynkSimpleEsp32.h>
-#include <ThingSpeak.h>
 
 #include <ESP32Ping.h>
 
@@ -52,8 +50,8 @@ struct Button {
 };
 
 /**********CONSTANTS**********/
-const char* DEFAULT_WIFI_SSID = "Moggy";// = "Globe";//= "HUAWEI-2.4G-88uF";               //insert default ssid for dev purposes
-const char* DEFAULT_WIFI_PASSWORD = "calculus";// = "dikoalam"; //= "wFJKvAksmLtec5Eb";           //insert default password for dev purposes
+const char* DEFAULT_WIFI_SSID = "HUAWEI-2.4G-88uF"; // = "Globe"; //  = "Moggy"; //           //insert default ssid for dev purposes
+const char* DEFAULT_WIFI_PASSWORD = "wFJKvAksmLtec5Eb"; // = "dikoalam"; // = "calculus"; //        //insert default password for dev purposes
 
 const char* USER_EMAIL = "smartAquaponicsSystem@gmail.com";
 const char* USER_PASSWORD = "smartAquaponics";
@@ -147,6 +145,8 @@ unsigned long previousModeMillis = 0;
 unsigned long previousWiFiMillis = 0;
 unsigned long previousCheckMillis = 0;  //stores when wifi connection was last checked
 
+unsigned long previousUIDMillis = 0; // for the timeout code of getting the UID
+
 unsigned long previousReadingTime = 0;  //store when readings was last read
 unsigned long previousSendingTime = 0;  //store when sensor reading was last sent to thingspeak
 
@@ -237,12 +237,15 @@ Button wifiButton = {17, false, 0};
 Button scheduleButton = {18, false, 0};
 
 Preferences preferences;            //instantiate preference object
+
 Adafruit_MCP23X17 mcp;              //instantiate mcp object
 LiquidCrystal_I2C lcd(0x27, 16, 2); //instantiate lcd object
 RTC_DS3231 rtc;                     //instantiate rtc object
+Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
+
 OneWire oneWire(ONE_WIRE_BUS);      //instantiate onewire object
 DallasTemperature sensors(&oneWire);//pass the oneWire object to DallasTemp object
-Adafruit_ADS1115 ads;  /* Use this for the 16-bit version */
+
 
 hw_timer_t *My_timer = NULL;
 
@@ -256,6 +259,12 @@ FirebaseConfig config;
 AsyncWebServer server(80); //Create an AsyncWebServer object on port 80.
 // AsyncWebSocket ws("/ws");  //Create an AsyncWebSocket object called ws to handle the connections on the /ws path.
 // AsyncEventSource events("/events"); // Create an Event Source on /events
+
+//debugging shit
+unsigned long previousStateCheckTime = 0;
+String boolState = "";
+int buttonCount = 0;
+int buttonTotal = 8;
 
 
 /*FUNCTION DECLARATIONS*/
@@ -326,6 +335,8 @@ int dbPressed(int gpio); //decides with button was pressed based on the gpio, ra
 void toggleSwitch (int buttonPressed); //decides how the button value would be handled, some buttons would always insist on only giving 1 while others would toggle between 0 and 1
 
 int readIntDB(String buttonPath); //reads the int value from the path, here it is mostly used for the button values
+
+void whichButtonPressed(); // just displays what the fuck was previously pressed before checkInput;
 
 //INTERRUPTS
 void IRAM_ATTR onAquaponicPress() {
@@ -406,7 +417,6 @@ void IRAM_ATTR onSensorPress() {
     //sensorButton.lastPressTime = button_time;
     buttonPressed = 6;
     localSwitch = true;
-    Serial.println("Sensor Button Pressed...");
   }
 }
 
@@ -419,7 +429,6 @@ void IRAM_ATTR onWiFiPress() {
     buttonPressed = 7;
     localSwitch = true;
     
-    Serial.println("WiFi Button Pressed...");
   }
 }
 
@@ -434,7 +443,6 @@ void IRAM_ATTR onSchedulePress() {
     // settlingStarted = false;
     // transferStarted = false;
     
-    Serial.println("Schedule Button Pressed...");
   }
 }
 
@@ -522,7 +530,7 @@ void setup() {
   loadSPIFFsFiles();
 
   wifiConnected = initWiFi();
-  //checkLastMode();
+  checkLastMode();
   internetConnected = internetCheck();
   ntpServerConnected = updateSystemTime();
   firebaseConnected = initFirebase();
@@ -556,7 +564,7 @@ void loop() {
   sendSensorData();
 
   
-  
+  whichButtonPressed();
   checkInput();
   checkSchedule();
   selectOperationMode();
@@ -824,8 +832,8 @@ bool initFirebase() {
       lcd.print("FIREBASE INIT..");
       lcd.setCursor(0, 1);
       lcd.print("NO INTERNET...");
-      firebaseConnected = false;
-      return firebaseConnected;
+
+      return false;
     }
     delay(500);
 
@@ -842,24 +850,34 @@ bool initFirebase() {
 
     Serial.println("Getting User UID");
 
+    previousUIDMillis = millis();
+
     while ((auth.token.uid) == "") {
-          Serial.print('.');
-          lcd.clear();
-          lcd.setCursor(0, 0);
-          lcd.print("FIREBASE INIT..");
-          lcd.setCursor(0, 1);
-          lcd.print("Getting UID...");
-          if (!internetCheck()) {
-            Serial.println("BOOT: Firebase: Lost connection to internet...");
-            lcd.clear();
-            lcd.setCursor(0, 0);
-            lcd.print("FIREBASE INIT..");
-            lcd.setCursor(0, 1);
-            lcd.print("NO INTERNET...");
-            firebaseConnected = false;
-            return firebaseConnected;
-          }
-          delay(1000);
+
+      Serial.print('.');
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("FIREBASE INIT..");
+      lcd.setCursor(0, 1);
+      lcd.print("Getting UID...");
+
+      //if there is still no UID after 15 seconds, that means there was something wrong with the token generation, and it will just set the flag that the firebase connection has failed.
+      if (millis() - previousUIDMillis >= FIFTEEN_SECOND_MS) {
+  
+        Serial.println("BOOT: Firebase: Timeout - Cannot fetch the UID...");
+        Serial.println("BOOT: Firebase: Timeout - Firebase connection failed...");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("FIREBASE INIT..");
+        lcd.setCursor(0, 1);
+        lcd.print("UID FETCH FAIL");
+
+        delay(1000);
+        return false;
+      }
+
+      delay(1000);
     }
 
     // Print user UID
@@ -1077,12 +1095,12 @@ String dbSwitch(int gpio, int state){
   String buttonName;
   switch(gpio){
     case 26: 
-      if (millis() - aquaponicsButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         if(state != 0) {
           aquaponicsButton.pressed = true;
           operationMode = 1;
           buttonPressed = 1;
-          aquaponicsButton.lastPressTime = millis();
+          previousButtonPressTime = millis();
           settlingStarted = false;
           transferStarted = false;
         }
@@ -1090,12 +1108,12 @@ String dbSwitch(int gpio, int state){
       buttonName = "Aquaponics Button";
       break;
     case 27: 
-      if (millis() - aquacultureButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         if (state != 0){
           aquacultureButton.pressed = true;
           operationMode = 2;
           buttonPressed = 2;
-          aquacultureButton.lastPressTime = millis();
+          previousButtonPressTime = millis();
           settlingStarted = false;
           transferStarted = false;
         }
@@ -1103,7 +1121,7 @@ String dbSwitch(int gpio, int state){
       buttonName = "Aquaculture Button";
       break;
     case 14: 
-      if (millis() - hydroponicsButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         if (state != 0){
           hydroponicsButton.pressed = true;
           operationMode = 3;
@@ -1116,12 +1134,12 @@ String dbSwitch(int gpio, int state){
       buttonName = "Hydroponics Button";
       break;
     case 13: 
-      if (millis() - transferButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         if (state != 0){
           transferButton.pressed = true;
           operationMode = 4;
           buttonPressed = 4;
-          transferButton.lastPressTime = millis();
+          previousButtonPressTime = millis();
           settlingStarted = false;
           transferStarted = false;
         }
@@ -1129,12 +1147,12 @@ String dbSwitch(int gpio, int state){
       buttonName = "Transfer Button";
       break;
     case 4: 
-      if (millis() - relayButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         if (state != 0){
           relayButton.pressed = true;
           operationMode = 5;
           buttonPressed = 5;
-          relayButton.lastPressTime = millis();
+          previousButtonPressTime = millis();
           settlingStarted = false;
           transferStarted = false;
         }
@@ -1142,26 +1160,26 @@ String dbSwitch(int gpio, int state){
       buttonName = "Relay Button";
       break;
     case 16: 
-      if (millis() - sensorButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         sensorButton.pressed = true;
         buttonPressed = 6;
-        sensorButton.lastPressTime = millis();
+        previousButtonPressTime = millis();
       }
       buttonName = "Sensor Button";
       break;
     case 17: 
-      if (millis() - wifiButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         wifiButton.pressed = true;
         buttonPressed = 7;
-        wifiButton.lastPressTime = millis();
+        previousButtonPressTime = millis();
       }
       buttonName = "WiFi Button";
       break;
     case 18: 
-      if (millis() - scheduleButton.lastPressTime >= 250) {
+      if (millis() - previousButtonPressTime >= 250) {
         scheduleButton.pressed = true;
         buttonPressed = 8;
-        scheduleButton.lastPressTime = millis();
+        previousButtonPressTime = millis();
       }
       buttonName = "Schedule Button";
       break;
@@ -1527,7 +1545,7 @@ void selectOperationMode(){
 
           transferMode();
           // save operation state to preferences
-          preferences.putInt("lastOperation", operationMode);
+          //preferences.putInt("lastOperation", operationMode);
           // put modeSwitched = false; inside sludgeTransferMode() because it needs to keep executing it 
           break;
         }
@@ -1553,6 +1571,7 @@ void selectOperationMode(){
           Serial.println("Mode Select: Defaulting to Aquaponics Mode");
           operationMode = 1;
           preferences.putInt("lastOperation", operationMode);
+          modeSwitched = false;
           break;
         }
     } else {
@@ -1995,7 +2014,8 @@ void hydroponicsMode() {
   lcd.print("HYDROPONICS ");
   lcd.setCursor(0, 1);
   lcd.print("OPENING SVALVE4");
-
+  //make sure S_VALVE_1 is closed for good
+  mcp.digitalWrite(S_VALVE_1, LOW); //normally closed
   mcp.digitalWrite(S_VALVE_4, LOW); //normally open
   delay(1000);
 
@@ -2029,14 +2049,30 @@ void transferMode() {
   String buttonPath = listenerPath.c_str() + dbButtons(buttonPressed);
   unsigned long currentTime;
   if (millis() - previousTransferCheck >= ONE_SECOND_MS) {
+
     if (ntpServerConnected == true) {
+
       currentTime = getTime();
+
     } else if (rtcConnected == true) {
+
       currentTime = rtc.now().unixtime();
+
     }
+
     if((settlingStarted == false) && (transferStarted == false)){ //check if settling was started, and if transfer is not started
+
       turnEverythingOff();
+
       Serial.println("TRANSFER MODE:  Initializing Sludge Transfer mode...");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("TRANSFER MODE");
+      lcd.setCursor(0, 1);
+      lcd.print("Initializing");
+
+      delay(500);
 
       Serial.println("TRANSFER MODE: Opening solenoid valves...");
 
@@ -2051,6 +2087,7 @@ void transferMode() {
       //divert fishtank water to backup filter
       mcp.digitalWrite(S_VALVE_3, LOW); //normally open
       mcp.digitalWrite(S_VALVE_5, LOW); //normally open
+
       delay(1000);
 
       Serial.println("TRANSFER MODE: Turning on airpumps...");
@@ -2063,6 +2100,7 @@ void transferMode() {
 
       mcp.digitalWrite(AIR_PUMP_1, HIGH); //normally closed
       mcp.digitalWrite(AIR_PUMP_2, HIGH); //normally closed
+      
       delay(1000);
 
       Serial.println("TRANSFER MODE: Turning on water pumps...");
@@ -2464,51 +2502,50 @@ void displayLCD() {
   float tempC, phVal, turb, oxy;
 
   String currentMode;
-  switch (operationMode) {
-    // Aquaponics Mode
-    case 1: {
-      currentMode = "Aquaponics";
-      break;
-    }
 
-    // Aquaculture Mode
-    case 2: {
-      currentMode = "Aquaculture";
-      break;
-    }
-
-    // Hydroponics Mode
-    case 3: {
-      currentMode = "Hydroponics";
-      break;
-    }
-
-    // Sludge Transfer Mode
-    case 4: {
-      currentMode = "Transfer Mode";
-      break;
-    }
-
-    // Relay Devices OFF Mode
-    case 5: {
-      currentMode = "Devices OFF";
-      break;
-    }
-
-    default:
-      Serial.println("Mode Select: No operation mode selected...");
-      Serial.println("Mode Select: Defaulting to Aquaponics Mode");
-      currentMode = "Aquaponics";
-      break;
-  }
-    
-  //updates current time
-  if(ntpServerConnected != true) {
-  currentTime = rtc.now().unixtime();
-  }else {
-  currentTime = getTime();
-  }
   if (millis() - previousCycleTime >= TWO_SECOND_MS) {
+    switch (operationMode) {
+      // Aquaponics Mode
+      case 1: {
+        currentMode = "Aquaponics";
+        break;
+      }
+
+      // Aquaculture Mode
+      case 2: {
+        currentMode = "Aquaculture";
+        break;
+      }
+
+      // Hydroponics Mode
+      case 3: {
+        currentMode = "Hydroponics";
+        break;
+      }
+
+      // Sludge Transfer Mode
+      case 4: {
+        currentMode = "Transfer Mode";
+        break;
+      }
+
+      // Relay Devices OFF Mode
+      case 5: {
+        currentMode = "Devices OFF";
+        break;
+      }
+
+      default:
+        currentMode = "Aquaponics";
+        break;
+    }
+    
+    //updates current time
+      if(ntpServerConnected != true) {
+      currentTime = rtc.now().unixtime();
+      }else {
+      currentTime = getTime();
+      }
 
     if (displayCount >= displayTotal) {
       //reset the display counter
@@ -2657,11 +2694,6 @@ void displayLCD() {
       displayCount++;
     }
 
-
-
-      
-
-
     previousCycleTime = millis();
   }
   
@@ -2675,6 +2707,12 @@ void backupPump() {
 
     if(oxygenLevel < 5.5) {
       Serial.println("Oxygen level lower than 5.5mg/L");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("BACKUP AIRPUMP");
+      lcd.setCursor(0, 1);
+      lcd.print("TURNING ON");
       
       if (backupAirPumpState == false) {
         Serial.println("Turning on backup airpump");
@@ -2686,6 +2724,12 @@ void backupPump() {
       backupAirPumpState = true;
     } else{
       Serial.println("Oxygen level higher than 5.5 mg/L");
+
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("BACKUP AIRPUMP");
+      lcd.setCursor(0, 1);
+      lcd.print("TURNING OFF");
 
       if (backupAirPumpState == true) {
         Serial.println("Turning off backup airpump");
@@ -2699,6 +2743,139 @@ void backupPump() {
     }
 
     previousOxygenCheck = millis();
+  }
+  
+}
+
+void whichButtonPressed () {
+  if (millis() - previousStateCheckTime >= 1000) {
+
+    Serial.print("Aquaponics button: ");
+    Serial.println(aquaponicsButton.pressed);
+    Serial.print("Aquaculture button: ");
+    Serial.println(aquacultureButton.pressed);
+    Serial.print("Hydroponics button: ");
+    Serial.println(hydroponicsButton.pressed);
+    Serial.print("transfer button: ");
+    Serial.println(transferButton.pressed);
+    Serial.print("Relay button: ");
+    Serial.println(relayButton.pressed);
+    
+    if (buttonCount >= buttonTotal) {
+      buttonCount = 0;
+    } else {
+      switch (buttonCount)
+      {
+      case 1:
+        if (aquaponicsButton.pressed == true) {
+          Serial.println("Aquaponics button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("AQUAPONICS");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+
+        }
+        break;
+      case 2:
+        if (aquacultureButton.pressed == true) {
+          Serial.println("Aquaculture button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("AQUACULTURE");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+      
+      case 3:
+        if (hydroponicsButton.pressed == true) {
+          Serial.println("Hydroponics button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("HYDROPONICS");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+      
+      case 4:
+        if (transferButton.pressed == true) {
+          Serial.println("Transfer button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("TRANSFER");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+
+      case 5:
+        if (transferButton.pressed == true) {
+          Serial.println("Transfer button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("TRANSFER");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+
+      case 6:
+        if (sensorButton.pressed == true) {
+          Serial.println("Sensor button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("SENSOR");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+
+      case 7:
+        if (wifiButton.pressed == true) {
+          Serial.println("WiFi button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("WIFI");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+
+      case 8:
+        if (scheduleButton.pressed == true) {
+          Serial.println("Schedule button was pressed...");
+
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("SCHEDULE");
+          lcd.setCursor(0, 1);
+          lcd.print("BUTTON PRESSED");
+          
+        }
+        break;
+      
+      default:
+        break;
+      }
+      buttonCount++;
+    }
+
+    previousStateCheckTime = millis();
   }
   
 }
