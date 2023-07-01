@@ -99,6 +99,7 @@ const unsigned long FIFTEEN_SECOND_MS = 15000;
 const unsigned long THIRTY_SECOND_MS = 30000;
 const unsigned long SIXTY_SECOND_MS = 60000;
 const unsigned long THREE_MINUTE_MS = 180000;
+const unsigned long FIVE_MINUTE_MS = 300000;
 const unsigned long SETTLING_TIME_S = 60; //= 3600;
 const unsigned long TRANSFER_TIME_S = 60; //= 600;
 const unsigned long SCHEDULE_TIME_S = 30; //= 604800;
