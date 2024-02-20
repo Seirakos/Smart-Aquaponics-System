@@ -261,7 +261,7 @@ AsyncWebServer server(80); //Create an AsyncWebServer object on port 80.
 // AsyncWebSocket ws("/ws");  //Create an AsyncWebSocket object called ws to handle the connections on the /ws path.
 // AsyncEventSource events("/events"); // Create an Event Source on /events
 
-//debugging shit
+//debugging 
 unsigned long previousStateCheckTime = 0;
 String boolState = "";
 int buttonCount = 0;
@@ -337,7 +337,7 @@ void toggleSwitch (int buttonPressed); //decides how the button value would be h
 
 int readIntDB(String buttonPath); //reads the int value from the path, here it is mostly used for the button values
 
-void whichButtonPressed(); // just displays what the fuck was previously pressed before checkInput;
+void whichButtonPressed(); // just displays what was previously pressed before checkInput;
 
 //INTERRUPTS
 void IRAM_ATTR onAquaponicPress() {
@@ -1392,8 +1392,8 @@ void toggleSwitch (int buttonPressed) {
 
 }
 
+// Read a value from the database
 int readIntDB(String buttonPath) {
-  // Read a value from the database
   int value;
   if (Firebase.RTDB.getInt(&fbdo, buttonPath.c_str())) {
     value = fbdo.intData();
@@ -1407,8 +1407,9 @@ int readIntDB(String buttonPath) {
   return value;
 }
 
-
-void reconfigureWifi(bool wifiButtonPressed, int buttonPressed) { // deletes the stored wifi credentials and forces the esp32 to restart
+// deletes the stored wifi credentials and forces the esp32 to restart
+void reconfigureWifi(bool wifiButtonPressed, int buttonPressed) { 
+	
   if(wifiButton.pressed == true && buttonPressed == 7) {
     if (SPIFFS.remove(SSID_PATH)) {
       Serial.println("WIFI SSID deleted successfully");
@@ -1841,7 +1842,10 @@ void checkLastMode() {
   modeSwitched = true;
   
 }
-void turnEverythingOff(){ //would turn every device connected to the relays off, if this was called by another mode function, switch flag would still be true
+//would turn every device connected to the relays off, 
+//if this was called by another mode function, switch flag would still be true
+void turnEverythingOff(){ 
+	
   Serial.println("Mode Switching: turning off all relays...");
     //220V
     //normally closed devices
